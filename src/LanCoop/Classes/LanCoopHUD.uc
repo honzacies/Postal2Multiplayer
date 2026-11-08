@@ -1,6 +1,48 @@
 // Keep the campaign HUD; add names using replicated PlayerReplicationInfo.
 class LanCoopHUD extends AWWrapHUD;
 
+// Original wanted icon/bar layout, including the base HUD coordinate fix;
+// the value now comes from the owning player's replicated state.
+simulated function DrawPlayerWantedStatus(Canvas C, float Scale)
+{
+    local LanCoopPlayer P;
+    local Texture Icon, Bar;
+    local float X, Y, Fraction, Width;
+    local P2Weapon W;
+    local string Hint1, Hint2;
+    P = LanCoopPlayer(PlayerOwner);
+    if (P == None || PawnOwner == None)
+        return;
+    Icon = Texture(WantedIcon);
+    Bar = Texture(WantedBar);
+    if (Icon == None || Bar == None)
+        return;
+    Fraction = FClamp(P.CoopWantedPercent, 0, 1);
+    X = IconPos[WantedIndex].X * C.ClipX - Scale * Icon.USize / 2;
+    Y = IconPos[WantedIndex].Y * CanvasHeight - Scale * Icon.VSize / 2;
+    C.Style = ERenderStyle.STY_Masked;
+    C.DrawColor = DefaultIconColor;
+    if (Fraction > 0)
+    {
+        C.SetPos(X, Y);
+        C.DrawIcon(Icon, Scale);
+        Width = Fraction * HUD_WANTED_BAR_SCALE_WIDTH * Icon.USize;
+        C.SetPos(X + Icon.USize * Scale * HUD_WANTED_BAR_OFF_X,
+            Y + Icon.VSize * Scale * HUD_WANTED_BAR_OFF_Y);
+        C.DrawTile(Bar, Scale * Width, Scale * Bar.VSize, 0, 0, Bar.USize, Bar.VSize);
+    }
+    W = P2Weapon(PawnOwner.Weapon);
+    if (W != None && W.GetCopHints(Hint1, Hint2))
+    {
+        if (Hint1 != "")
+            MyFont.DrawTextEx(C, CanvasWidth, X + Scale * Icon.USize / HUD_N_HINT_ALIGN_X,
+                (IconPos[WantedIndex].Y + WantedTextPos[0].Y) * CanvasHeight, Hint1, 0, true, EJ_Right);
+        if (Hint2 != "")
+            MyFont.DrawTextEx(C, CanvasWidth, X + Scale * Icon.USize / HUD_N_HINT_ALIGN_X,
+                (IconPos[WantedIndex].Y + WantedTextPos[1].Y) * CanvasHeight, Hint2, 0, true, EJ_Right);
+    }
+}
+
 simulated event PostRender(Canvas C)
 {
     local Pawn P;

@@ -14,7 +14,7 @@ and Apocalypse Weekend**. Paradise Lost is not included for now.
 ## Built-in multiplayer menu
 
 Host a game, find a LAN session and join your friends through the in-game
-**Multiplayer** menu. The host menu includes player/spectator limits and a skip-intro
+**Multiplayer** menu. The host menu includes difficulty selection, player/spectator limits and a skip-intro
 option, while **Player Change** lets you choose your name and character.
 
 Character changes still have a known bug: another player may see the new body
@@ -35,7 +35,7 @@ bugs and unfinished features, especially around police, NPCs and cutscenes.
 | Host / join menu and LAN search | Available; still being tested |
 | Completing errands together | Partly working |
 | Shared cutscenes | Partly working; dialogue, subtitles and skipping have problems |
-| Police and wanted levels | Known bugs: the wrong player can receive the wanted level |
+| Police and wanted levels | Per-player fix added; server checks passed, confirmation on two LAN PCs still needed |
 | NPCs and dogs | Known bugs: they can choose the wrong player to attack |
 | Saving, loading and autosave | Not available yet |
 

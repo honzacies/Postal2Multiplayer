@@ -7,6 +7,63 @@ var GameState World;
 var Inventory FirstInventory;
 var int ReadyAttempts;
 
+function bool CheckWantedOwnership(LanCoopGameInfo G)
+{
+    local P2Pawn TestCop;
+    local LanCoopPoliceController Cop;
+    local float Previous;
+    local byte StateChange;
+    local bool bPassed;
+    TestCop = Spawn(class'LanCoopWantedProbeCop',,, First.Pawn.Location + vect(0,0,256));
+    if (TestCop == None)
+        return false;
+    if (TestCop.Controller == None)
+    {
+        TestCop.Controller = Spawn(TestCop.ControllerClass);
+        TestCop.Controller.Possess(TestCop);
+    }
+    Cop = LanCoopPoliceController(TestCop.Controller);
+    if (Cop == None)
+    {
+        class'LanCoopLog'.static.WriteEvent(Self, "WantedCheckFailed", "Police controller was not adapted");
+        TestCop.Destroy();
+        return false;
+    }
+    Cop.GotoState('');
+    LanCoopPawn(First.Pawn).CoopWantedTime = 0;
+    LanCoopPawn(Second.Pawn).CoopWantedTime = 0;
+    Cop.ReportAsWanted(FPSPawn(Second.Pawn), true);
+    bPassed = LanCoopPawn(First.Pawn).CoopWantedTime == 0
+        && LanCoopPawn(Second.Pawn).CoopWantedTime == G.TheGameState.CopRadioBase
+        && LanCoopPlayer(First).CoopWantedPercent == 0
+        && LanCoopPlayer(Second).CoopWantedPercent > 0
+        && G.TheGameState.CopRadioTime == 0;
+    // An innocent host bump must not enter wanted-driven arrest logic.
+    Cop.SetAttacker(None);
+    Cop.PlayerAttackedMe = None;
+    Cop.DangerPawnBump(First.Pawn, StateChange);
+    bPassed = bPassed && StateChange == 0 && Cop.Attacker != First.Pawn;
+    StateChange = 0;
+    Cop.DangerPawnBump(Second.Pawn, StateChange);
+    bPassed = bPassed && StateChange == 1 && Cop.Attacker == Second.Pawn;
+    // Reverse the roles with the same cop: report dedup must not lose a player.
+    Cop.GotoState('');
+    Cop.ReportAsWanted(FPSPawn(First.Pawn), false);
+    bPassed = bPassed && LanCoopPawn(First.Pawn).CoopWantedTime > 0;
+    Previous = class'LanCoopWanted'.static.BeginCheck(Cop, FPSPawn(First.Pawn));
+    class'LanCoopWanted'.static.EndCheck(Cop, Previous);
+    bPassed = bPassed && G.TheGameState.CopRadioTime == 0;
+    LanCoopPawn(First.Pawn).CoopWantedTime = 0;
+    LanCoopPawn(Second.Pawn).CoopWantedTime = 0;
+    LanCoopPlayer(First).CoopWantedPercent = 0;
+    LanCoopPlayer(Second).CoopWantedPercent = 0;
+    Cop.Destroy();
+    TestCop.Destroy();
+    if (bPassed)
+        class'LanCoopLog'.static.WriteEvent(Self, "WantedOwnershipCheckOk", "ClientAndHostSeparated InnocentBumpIgnored SuspectBumpRecognized=true");
+    return bPassed;
+}
+
 function bool CheckInventorySelection()
 {
     local Inventory FirstItem, SecondItem;
@@ -192,6 +249,11 @@ event Timer()
             || First.Pawn.Inventory != FirstInventory || G.NumPlayers != 2)
         {
             class'LanCoopLog'.static.WriteEvent(Self, "LifecycleFailed", "World/player state changed on second join");
+            return;
+        }
+        if (!CheckWantedOwnership(G))
+        {
+            class'LanCoopLog'.static.WriteEvent(Self, "LifecycleFailed", "Wanted ownership or police suspect selection");
             return;
         }
         if (!CheckInventorySelection())

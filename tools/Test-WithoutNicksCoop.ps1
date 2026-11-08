@@ -1,4 +1,4 @@
-param([string]$UccToolDirectory)
+param([string]$UccToolDirectory, [string]$ModPackagePath)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $game = Join-Path $root 'POSTAL2Complete'
@@ -12,6 +12,9 @@ $files = Get-ChildItem -LiteralPath $sourceSystem -File | Where-Object {
         $_.Name -notmatch '(?i)NicksCoop|Postal2CoOp'
 }
 foreach ($file in $files) { Copy-Item -LiteralPath $file.FullName -Destination $system }
+if ($ModPackagePath) {
+    Copy-Item -LiteralPath $ModPackagePath -Destination (Join-Path $system 'LanCoop.u') -Force
+}
 if (!(Test-Path -LiteralPath (Join-Path $system 'UCC.exe'))) {
     if (!$UccToolDirectory) { throw 'UCC.exe missing; specify an existing tool directory for the isolated audit.' }
     $tool = Join-Path $UccToolDirectory 'UCC.exe'

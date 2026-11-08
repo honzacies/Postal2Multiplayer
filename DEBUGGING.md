@@ -131,3 +131,26 @@ the old installation by SHA-256 before mod deployment. The installed mod passed
 the base capability and headless lifecycle checks using the clean game's packages.
 Original core/config hashes were preserved. UCC.exe was used only in a separate
 audit directory because the clean game does not ship it. See MP-FIX-AUDIT.md.
+
+## Per-player wanted update
+
+CoopWantedTime travels with each LanCoopPawn. A server P2GameMod installs police
+adapters before controller creation, retaining the original Police, Military,
+AWMilitary and FollowPlayer controller subclasses' state machines. Their reports
+use the actual suspect. Synchronous native sight/bump/radio checks temporarily
+read that suspect's wanted value, then restore the shared legacy field.
+The authority timer decays each player's value, preserving the native base floor
+only while cops pursue that player. Owner-controller CoopWantedPercent replicates
+the value for LanCoopHUD; the HUD no longer reads server-only Level.Game.
+
+WantedOwnershipCheckOk passed using a real adapted police controller with fake
+player connections: client-only report, independent host report, innocent-host
+bump ignored, wanted-client bump recognized, shared-field restoration. A real
+two-PC HUD/AI test is still required. Existing bribe/jail-specific shared-state
+resets and third-party controller subclasses are not comprehensively adapted.
+Dog/NPC personal hostility is separate and remains unresolved.
+
+Host Game now uses the installed game's original difficulty names for its 16
+stock presets and reuses ShellMenuCW.SetDiff for the special-mode flag mapping.
+The separate custom difficulty editor is not added. Menu interaction/preset
+gameplay verification remains pending.

@@ -1,7 +1,8 @@
-param()
+param([string]$GameDirectory)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $game = Join-Path $root 'POSTAL2Complete'
+if ($GameDirectory) { $game = (Resolve-Path -LiteralPath $GameDirectory).Path }
 $system = Join-Path $game 'System'
 $stage = Join-Path $game 'LanCoop/Classes'
 $artifacts = Join-Path $root 'artifacts'
@@ -17,7 +18,7 @@ $config = $config -replace '(?m)^ServerActors=IpDrv.UdpServerUplink[^\r\n]*\r?\n
 $config = $config -replace '(?m)^ServerActors=UWeb.WebServer[^\r\n]*\r?\n', ''
 $config = $config -replace '(?m)^StartupFullscreen=.*$', 'StartupFullscreen=False'
 $config = $config -replace '(?m)^EditPackages=.*\r?\n', ''
-$config = $config -replace '(?m)^\[Editor.EditorEngine\]', "[Editor.EditorEngine]`r`nEditPackages=Core`r`nEditPackages=Engine`r`nEditPackages=Editor`r`nEditPackages=IpDrv`r`nEditPackages=FPSGame`r`nEditPackages=Postal2Game`r`nEditPackages=MultiBase`r`nEditPackages=MoreGame`r`nEditPackages=MultiGame`r`nEditPackages=MultiStuff`r`nEditPackages=GameTypes`r`nEditPackages=Shell`r`nEditPackages=LanCoop"
+$config = $config -replace '(?m)^\[Editor.EditorEngine\]', "[Editor.EditorEngine]`r`nEditPackages=Core`r`nEditPackages=Engine`r`nEditPackages=Editor`r`nEditPackages=IpDrv`r`nEditPackages=FPSGame`r`nEditPackages=Postal2Game`r`nEditPackages=MultiBase`r`nEditPackages=MoreGame`r`nEditPackages=MultiGame`r`nEditPackages=MultiStuff`r`nEditPackages=GameTypes`r`nEditPackages=AIPack`r`nEditPackages=AWPawns`r`nEditPackages=Shell`r`nEditPackages=LanCoop"
 $config = $config -replace '(?m)^\[Engine.GameEngine\]', "[Engine.GameEngine]`r`nServerPackages=LanCoop"
 $configPath = Join-Path $system 'LanCoop.ini'
 Set-Content -LiteralPath $configPath -Value $config -Encoding ascii

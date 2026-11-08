@@ -1,6 +1,7 @@
 class LanCoopSessionSettings extends Object config(LanCoopSession);
 
 var config int PlayerLimit, SpectatorLimit, Port;
+var config int DifficultySelection;
 var config string PlayerName;
 var config bool bSkipIntro;
 
@@ -11,4 +12,5 @@ defaultproperties
     Port=7777
     PlayerName="Dude"
     bSkipIntro=true
+    DifficultySelection=5
 }

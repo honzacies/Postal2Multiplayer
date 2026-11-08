@@ -137,6 +137,7 @@ event InitGame(out string Options, out string Error)
     local string RequestedName;
     RequestedName = ParseOption(Options, "Name");
     Super.InitGame(Options, Error);
+    AddMutator("LanCoop.LanCoopAuthorityMutator");
     // SP rewrites this out parameter to "Player". On server travel that
     // changes the native inventory lookup key and loses the host's cargo.
     if (RequestedName != "")

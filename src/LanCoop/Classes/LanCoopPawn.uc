@@ -11,6 +11,7 @@ var travel bool bCoopSavedGodMode;
 var bool bCoopArrivalHandled;
 var bool bCoopDayLoadoutApplied;
 var bool bCoopArrivalPlaced;
+var travel float CoopWantedTime;
 
 function RestoreCombatReferences()
 {

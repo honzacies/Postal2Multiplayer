@@ -29,6 +29,11 @@ checks without a matching user-provided installation and compiler tool.
 
 ## Active regression checklist
 
+Wanted update: a dedicated fixture passed reporting a client without raising the
+host's meter, reporting the host separately, ignoring an innocent-host bump, and
+recognizing the wanted client's bump. Replicated HUD display still needs a real
+LAN retest; these boxes remain open until that manual verification.
+
 - [ ] Finish and verify spectator mode, including spectator slot limits and map travel.
 - [ ] Implement and verify cheat mode behavior in coop.
 - [ ] Implement and verify admin access and permissions.
@@ -48,6 +53,7 @@ checks without a matching user-provided installation and compiler tool.
 - [ ] Dropped items/attachments/NPC animations match between host and client.
 - [ ] LAN discovery shows one entry per server and normal joining defaults to player.
 - [ ] Test the session on two separate LAN PCs.
+- [ ] Verify the host difficulty selector applies each original preset and preserves it through travel.
 
 ## Completing a campaign day
 

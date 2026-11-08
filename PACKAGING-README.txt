@@ -44,6 +44,10 @@ loading/cross-out sequencing, all AI targeting, dialogue/subtitle replication
 and client-side item/animation issues remain under development. New quest
 context binding covers controllers directly created by the completion event;
 it does not yet adapt every original singleplayer scripted action.
+The wanted-level update separates suspect state and passed server-side ownership
+checks. Confirm both HUDs and police reactions on two PCs. Bribe/jail-specific
+resets still need further work. Host Game has the 16 original difficulty presets;
+the custom difficulty editor is not included.
 Compatibility with a clean installation must still be tested. Compilation
 used the installed April 17 2023 POSTAL 2 build and its packages. Different
 official builds may require recompilation. No core game package was patched

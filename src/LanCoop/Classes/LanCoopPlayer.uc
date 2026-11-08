@@ -15,6 +15,7 @@ var float NextCoopInputLog;
 var name LastCoopState;
 var Pawn LastCoopPawn;
 var float CoopArrivalGraceUntil;
+var float CoopWantedPercent;
 
 // The base readiness fix waits for Player, but our UI guards also require
 // InteractionMaster. Do not permanently mark a skipped setup as complete.
@@ -116,6 +117,8 @@ replication
 {
     reliable if (Role < ROLE_Authority)
         ServerSetAppearance, ServerCoopMap, ServerCoopReady, ServerCoopSceneSkip;
+    reliable if (Role == ROLE_Authority)
+        CoopWantedPercent;
     reliable if (Role == ROLE_Authority)
         ClientProbeInventory, ClientProbeCombat, ClientCoopMusic, ClientStopCoopMusic, ClientClearCoopMusic,
         ClientBeginCoopScene, ClientEndCoopScene, ClientPrepareCoopTravel,
