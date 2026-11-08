@@ -1,0 +1,33 @@
+# Original game files and third-party source snapshots
+/POSTAL2Complete*/
+/p2unrealscript-master/
+# Generated packages, test installations, manifests and private runtime evidence
+/artifacts/
+/LanCoopReports/
+/debug-logs/
+*.u
+*.dll
+*.exe
+*.fuk
+*.utx
+*.uax
+*.ukx
+*.usx
+*.upx
+*.umx
+*.ogg
+*.usa
+*.uxx
+*.log
+*.ini
+*.zip
+*.7z
+# Local credentials/editor state
+.env
+.env.*
+*.pem
+*.key
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

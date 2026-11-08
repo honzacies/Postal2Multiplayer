@@ -1,0 +1,50 @@
+name: Coop bug report
+description: Report a reproducible multiplayer problem.
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Mod commit and game build
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: Campaign day and map
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: Who performed the action?
+      options:
+        - Host
+        - Client
+        - Both
+        - Unknown
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include the starting state and whether this followed map travel or a cutscene.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Relevant log excerpt or screenshots
+      description: Include host and client observations where possible.
