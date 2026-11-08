@@ -1,100 +1,103 @@
 # POSTAL 2 LAN Coop
 
-Experimental two-player cooperative campaign mod for **POSTAL 2 Complete**.
-Scope: **Monday–Friday and Apocalypse Weekend**. Paradise Lost is out of scope.
+Play the POSTAL 2 campaign with a friend over LAN.
 
-**Work in progress. No campaign day has passed a complete two-player playthrough yet.**
+The goal is to explore Paradise together, complete errands, keep your own inventory,
+and move between areas as a group. The planned campaign covers **Monday to Friday
+and Apocalypse Weekend**. Paradise Lost is not included for now.
 
-## Status
+> **Early development:** this is a testing project, not a finished coop campaign.
+> No complete campaign day has been fully tested with two players yet.
 
-Last updated: 2026-11-08. "Implemented" does not mean "fully tested".
+## Can we play it yet?
 
-| Feature | Implementation | Verification / remaining work |
-| --- | --- | --- |
-| Two local game instances without a VM | Implemented | Two real instances connected and players saw each other. Two separate LAN PCs still need verification. |
-| Player names and selectable appearance | Partial | Names work; appearance handling exists. Full skin/head matrix unverified. |
-| Independent inventories | Implemented, experimental | Both players opened inventory; selected items/ammo/health/armor survived tested map round trips. Save slots are not implemented. |
-| Coordinated map travel | Partial | Direct round trip passed with real clients; physical gates tested manually. Arrival fixes passed server tests; broad portal coverage remains. |
-| LAN host/join menu | Implemented, experimental | Manual joining exercised. Discovery deduplication and spectator-default fixes need broader LAN testing. |
-| Shared quest completion | Partial | 60 server-side goal fixtures passed for both player roles; this does not verify full NPC scenarios. |
-| Shared cutscene camera | Partial | Camera relay exists; dialogue, subtitles, skipping and cleanup remain incomplete. |
-| Per-player wanted level | Known bug | Shared singleplayer state can attribute the client's wanted level to the host. Active investigation. |
-| NPC and dog target ownership | Known bug | Personal hostility can target the wrong player; travel can lose target identity. Active investigation. |
-| Paycheck protestor hostility | Incomplete | Campaign hostility should apply to both coop players; needs implementation and gameplay verification. |
-| Client NPC/item replication | Known bugs | Floating/unowned-looking items and stalled NPC animation have been reported. |
-| Campaign save/load and autosave | Not implemented | Autosave control is disabled; do not rely on save-slot persistence. |
-| Mod-only ZIP | Implemented | Archive content/checksums validated; installed on a separate clean game copy. |
-| Independence from standalone Nick's Coop | Verified for tested paths | Base-function audit and isolated server lifecycle passed without NicksCoop.u. Full campaign remains unverified. |
-| Verbose debugging | Implemented | Console lines capped at 40 characters; complete details remain in per-instance log files. |
+Two players can join, see each other, use their inventories and travel between
+areas. However, several parts of the campaign still behave incorrectly. Expect
+bugs and unfinished features, especially around police, NPCs and cutscenes.
 
-## Campaign playthrough coverage
+| Feature | Current state |
+| --- | --- |
+| Two players in one world | Working in local tests; testing on two separate LAN PCs is still needed |
+| Separate player inventories | Working in tested cases; broader testing is ongoing |
+| Travelling between areas together | Working in tested cases, with remaining bugs being fixed |
+| Host / join menu and LAN search | Available; still being tested |
+| Completing errands together | Partly working |
+| Shared cutscenes | Partly working; dialogue, subtitles and skipping have problems |
+| Police and wanted levels | Known bugs: the wrong player can receive the wanted level |
+| NPCs and dogs | Known bugs: they can choose the wrong player to attack |
+| Saving, loading and autosave | Not available yet |
 
-A day is marked complete only after a recorded two-player end-to-end run, including
-quest credit, inventory preservation, transitions, cutscenes and advancing to the next day.
+## Download
 
-| Day | Manual coop coverage | Fully tested |
-| --- | --- | --- |
-| Monday | Partial exploration, Main Street/RWS transitions and paycheck scenario. Known AI/wanted/cutscene bugs. | **No** |
-| Tuesday | No complete manual run recorded. | **No** |
-| Wednesday | No complete manual run recorded. | **No** |
-| Thursday | No complete manual run recorded. | **No** |
-| Friday | No complete manual run recorded. | **No** |
-| Apocalypse Weekend: Saturday | No complete manual run recorded. | **No** |
-| Apocalypse Weekend: Sunday | No complete manual run recorded; scripted/boss flow unverified. | **No** |
+**There is no public playable release yet.** Downloadable test builds will be
+listed in [Releases](https://github.com/honzacies/Postal2Multiplayer/releases)
+when they are ready to share.
 
-See [TESTING.md](TESTING.md) for the test ledger and completion criteria.
-Automated goal fixtures are never counted as completed campaign days.
+GitHub's **Code → Download ZIP** downloads the project source, not an installable mod.
+You will need your own copy of POSTAL 2 Complete; the game is not included.
 
-## What is included
+## How test builds are installed
 
-Our UnrealScript classes, Windows development/test tools, launchers and documentation.
-This repository does **not** include the game, original developer source dump,
-Nick's standalone mod, game assets, player saves, private logs or compiled packages.
-A legally obtained matching installation is required on each player machine.
+When a test ZIP is available:
 
-Original classes include multiplayer contributions attributed to NickP. We inherit
-those base-game fixes; this does not require NicksCoop.u. See
-[MP-FIX-AUDIT.md](MP-FIX-AUDIT.md) and [CREDITS.md](CREDITS.md).
+1. Use a separate, clean copy of POSTAL 2 Complete.
+2. Extract the mod ZIP into the game folder — the folder containing `System`.
+3. Start the game using the included `Start-LanCoop-*` launchers.
 
-## Development setup
+Nick's Coop does not need to be installed. Each player needs the same game version
+and the same version of this mod. The current build has been tested with POSTAL 2
+build 5100, dated April 17, 2023. Compatibility with other versions is unverified.
 
-1. Place your own clean game in `POSTAL2Complete` beside this README.
-2. Provide a matching `System/UCC.exe` compiler tool; the tested clean Steam copy
-   did not include it. The repository does not redistribute that tool.
-3. Close running test instances before rebuilding their package.
-4. Run `./tools/Build.ps1` in PowerShell to compile only our `LanCoop.u` package.
+## Playing with a friend
 
-Compilation has been tested against build 5100, dated April 17, 2023. Other builds
-may require source changes or recompilation. The supplied developer source snapshot
-used for investigation was dated April 22, 2023; it is not included here.
+- **Host:** run `Start-LanCoop-Host.cmd`.
+- **Friend:** run `Start-LanCoop-Menu.cmd`, then choose **Multiplayer → Join Game**.
+- Select the LAN game. Leave **Join as spectator** unchecked to play.
+- If discovery does not find the host, enter the host's LAN address and port.
+  The included Host launcher uses port **7787**.
 
-`Build.ps1` resets only our development INIs and generated package. It does not
-rebuild the original game packages. Do not copy files from an unrelated game build
-to satisfy a missing dependency.
+Testing two instances on one PC is also supported, without a VM:
+start Host first, then `Start-LanCoop-Client.cmd`.
 
-## Run
+These instructions describe the current experimental test package. Some features
+may change before a public release. Do not expect a reliable full campaign yet.
 
-After building, use `Start-Host.cmd` and `Start-Client.cmd` for a same-PC test.
-Use `Start-Multiplayer.cmd` for the host/join menus. The root Host launcher listens
-on port **7787**; the menu's host port is configurable and defaults to **7777**.
-Join the matching address and port. Separate INIs/cache/save directories and
-`-NewWindow` allow two instances; this is experimental.
+## Campaign testing
 
-A mod ZIP produced by `tools/Package-Mod.ps1` has separate `Start-LanCoop-*`
-launchers intended to be extracted into the target game directory. See
-[PACKAGING-README.txt](PACKAGING-README.txt).
+| Campaign day | Fully tested in coop? |
+| --- | --- |
+| Monday | No — parts of the day and the paycheck scenario have been tested |
+| Tuesday | Not yet |
+| Wednesday | Not yet |
+| Thursday | Not yet |
+| Friday | Not yet |
+| Apocalypse Weekend: Saturday | Not yet |
+| Apocalypse Weekend: Sunday | Not yet |
 
-## Debugging and bug reports
+"Fully tested" means completing every required errand, keeping both players'
+inventories, checking cutscenes and transitions, and reaching the correct next day.
+Passing an automated check does not count as finishing a day.
 
-Open the game console with ConsoleToggle (normally the key below Escape).
-`CoopDebugConsole on` / `CoopDebugConsole off` controls console echo.
-Full logs are `System/LanCoopHost.log`, `LanCoopClient.log` or `LanCoopMenu.log`.
-An instance started through the menu keeps its Menu log after joining.
+## Found a bug?
 
-Report the day/map, who performed the action (host/client), steps, expected and
-actual behavior, and the relevant log excerpt. Use the bug-report issue template.
-See [DEBUGGING.md](DEBUGGING.md) for log details and current implementation limits.
+[Open a bug report](https://github.com/honzacies/Postal2Multiplayer/issues/new/choose)
+and tell us:
 
-Historical implementation notes live in [ARCHITECTURE.md](ARCHITECTURE.md),
-[TRAVEL.md](TRAVEL.md) and [PHASE1.md](PHASE1.md). Older entries describe their
-then-current state; the tables above and test ledger are the current status.
+- Which day and area you were in.
+- Whether the host or the joining player performed the action.
+- What you did, what you expected, and what happened instead.
+- Whether it happened after travelling or skipping a cutscene.
+
+Screenshots and a short log excerpt help. Logs are in the game's `System` folder:
+`LanCoopHost.log`, `LanCoopMenu.log` or `LanCoopClient.log`, depending on which
+launcher was used. [More about logs](DEBUGGING.md).
+
+## For contributors
+
+The detailed [test ledger](TESTING.md), [development guide](docs/DEVELOPMENT.md)
+and [implementation notes](ARCHITECTURE.md) track the work behind the mod.
+Contributions to the original game, including its base multiplayer fixes, are
+acknowledged in [CREDITS.md](CREDITS.md).
+
+This is an unofficial project. POSTAL 2 and Unreal Engine belong to their
+respective owners. No game files or original developer source dump are included.
