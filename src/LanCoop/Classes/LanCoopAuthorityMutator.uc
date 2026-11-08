@@ -1,4 +1,39 @@
 class LanCoopAuthorityMutator extends P2GameMod;
+var array<P2MoCapPawn> AttachmentPawns;
+
+function UpdateAttachmentBindings()
+{
+    local P2MoCapPawn P;
+    local LanCoopAttachmentRelay Relay;
+    local int I, J;
+    local bool bKnown, bHasParts;
+    for (I = AttachmentPawns.Length - 1; I >= 0; I--)
+        if (AttachmentPawns[I] == None || AttachmentPawns[I].bDeleteMe)
+            AttachmentPawns.Remove(I, 1);
+    foreach DynamicActors(class'P2MoCapPawn', P)
+    {
+        bKnown = false;
+        for (I = 0; I < AttachmentPawns.Length; I++)
+            if (AttachmentPawns[I] == P)
+                bKnown = true;
+        if (bKnown)
+            continue;
+        bHasParts = P.TempBolton.Part != None;
+        for (J = 0; J < 8; J++)
+            bHasParts = bHasParts || P.Boltons[J].Part != None;
+        if (bHasParts)
+        {
+            Relay = Spawn(class'LanCoopAttachmentRelay', P);
+            if (Relay != None)
+            {
+                Relay.SourcePawn = P;
+                Relay.Timer();
+                Relay.SetTimer(0.5, true);
+                AttachmentPawns[AttachmentPawns.Length] = P;
+            }
+        }
+    }
+}
 
 function bool CheckReplacement(Actor Other, out byte bSuperRelevant)
 {
@@ -32,6 +67,7 @@ event Timer()
     local bool bPursued;
     if (P2GameInfoSingle(Level.Game) == None)
         return;
+    UpdateAttachmentBindings();
     S = P2GameInfoSingle(Level.Game).TheGameState;
     if (S == None)
         return;

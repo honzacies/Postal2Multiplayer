@@ -22,6 +22,7 @@ Never mark an untested feature as working merely because it compiled.
 | Clean installation comparison | Passed | All 62 original System .u/.dll/.exe files matched the previous installation before mod deployment. Original configs/core files preserved. |
 | Clean graphical host/menu startup | Passed | Both processes responded; host spawned a pawn. Complete two-client campaign verification remains open. |
 | ZIP packaging / launcher bootstrap | Passed | Mod-only archive hashes verified; all three role INIs initialized without development INIs. |
+| Day opening and errand handout | Passed headless | `MapObjectivesCheckOk` covers the day flags, the repeatable server handout, client rebuild from class defaults, completion crossout and the briefing start state. Monday only; no graphical two-client run yet. |
 
 Local evidence logs/artifacts are intentionally excluded from Git. Reports in this
 ledger summarize those observations; the public repository cannot replay the game
@@ -54,6 +55,17 @@ LAN retest; these boxes remain open until that manual verification.
 - [ ] LAN discovery shows one entry per server and normal joining defaults to player.
 - [ ] Test the session on two separate LAN PCs.
 - [ ] Verify the host difficulty selector applies each original preset and preserves it through travel.
+- [ ] Both players get the day's errand map when Monday opens, with the Dude's lines and the locations marked.
+- [ ] Either player completing an errand crosses it off on both maps, with the completion line.
+- [ ] Opening the map by key later in the day shows the same list and crossouts on both sides.
+- [ ] Travelling to another map of the same day does not replay the errand writing.
+- [ ] A client that joins after the day opened still receives the errand map.
+
+## Staged event routing
+
+See [event routing coverage](docs/EVENT-ROUTING.md) for the next build's supported
+actions, isolated server checks and outstanding two-PC newspaper/event tests.
+These changes are prepared separately while the current LAN session is running.
 
 ## Completing a campaign day
 

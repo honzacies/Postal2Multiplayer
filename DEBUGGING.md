@@ -88,7 +88,7 @@ is independent of authoritative arrival placement.
 
 ## Clean-install comparison build
 
-Console event text is capped at 40 characters, using the event name and the
+Console event text is capped at 100 characters, using the event name and the
 original data before long context prefixes. Full file log lines are unchanged.
 
 Arrival placement now traces BSP floor without actors and tries an unoccupied
@@ -154,3 +154,33 @@ Host Game now uses the installed game's original difficulty names for its 16
 stock presets and reuses ShellMenuCW.SetDiff for the special-mode flag mapping.
 The separate custom difficulty editor is not added. Menu interaction/preset
 gameplay verification remains pending.
+
+## Day opening and errand handout
+
+The coop GameInfo never opened a campaign day. `bFirstLevelOfGame` and
+`bFirstLevelOfDay` stayed false, so every original start-of-day script was a
+no-op: `suburbs-3`'s `CheckStartDay` logged `action[0]`, `action[1]`, then
+jumped straight to `end section`. Nothing ever wrote to
+`GameState.RevealedErrands`, so no errand was ever handed out and the map had
+nothing to draw for either player.
+
+`InitGame` now opens the day before the first login, because the map's
+`CheckStartDay` fires when the first pawn spawns, well before the world
+staging state runs. `RevealCampaignErrands` performs the handout on the server
+instead of inside one player's map animation, and the result replicates as
+per-errand bit masks on `LanCoopReplicationInfo`.
+
+The client map is rebuilt locally from `class'LanCoopGameInfo'.Default.Days`
+plus those masks, rather than receiving replicated `Texture` references and
+sprite coordinates. Every stock map-screen entry point that needs
+`Level.Game` is overridden, and the local reveal bookkeeping uses masks so the
+UI never mutates the shared campaign record. Completion now shows the original
+crossout animation to both players.
+
+Null guards were added for the shipped weekend data: `AWGameSP`'s Sunday day
+contains a literal `Errands(0)=None`, and goal validation is limited to the
+current day so that entry is no longer reported as an error.
+
+Validation: build and package load passed; the headless lifecycle probe
+reports `MapObjectivesCheckOk` and `LifecycleOk`, and the mission audit still
+reports 60 passed, 0 failed, 1 skipped. No graphical two-client run yet.

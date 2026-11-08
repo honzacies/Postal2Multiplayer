@@ -39,6 +39,18 @@ bugs and unfinished features, especially around police, NPCs and cutscenes.
 | NPCs and dogs | Known bugs: they can choose the wrong player to attack |
 | Saving, loading and autosave | Not available yet |
 
+The next experimental build adds a client map, owner-only pickup sounds,
+remote urine visuals and reconnect inventory recovery for the same running
+campaign. Server checks have passed; two-PC presentation and reconnect testing
+are still needed. Reconnect recovery does not save the campaign when the host
+quits. Coop launchers preserve your saved graphics and control settings.
+
+It also hands the day's errands out the way the original campaign does. When
+a day opens, both players get the map with the Dude writing the day's chores
+on it, and when either player finishes one, both see it crossed off. Before
+this, no day was ever opened, so the original start-of-day scripts never ran
+and the map stayed blank for both players.
+
 ## To do
 
 - [ ] Finish spectator mode.
@@ -148,8 +160,10 @@ launcher was used. [More about logs](DEBUGGING.md).
 
 ## For contributors
 
-The detailed [test ledger](TESTING.md), [development guide](docs/DEVELOPMENT.md)
-and [implementation notes](ARCHITECTURE.md) track the work behind the mod.
+Start with the [code map](docs/CODE-MAP.md): where everything lives, how the
+original campaign hands out work, and the engine rules that bite. The detailed
+[test ledger](TESTING.md), [development guide](docs/DEVELOPMENT.md) and
+[implementation notes](ARCHITECTURE.md) track the work behind the mod.
 Contributions to the original game, including its base multiplayer fixes, are
 acknowledged in [CREDITS.md](CREDITS.md).
 

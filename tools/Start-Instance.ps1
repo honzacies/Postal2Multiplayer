@@ -19,7 +19,9 @@ $iniPath = Join-Path $system $iniName
 $userPath = Join-Path $system $userName
 if (!(Test-Path -LiteralPath $iniPath)) {
     # Bootstrap from the target installation, not the development machine.
-    $config = Get-Content -LiteralPath (Join-Path $system 'Default.ini') -Raw
+    $seed = Join-Path $system 'Postal2.ini'
+    if (!(Test-Path -LiteralPath $seed)) { $seed = Join-Path $system 'Default.ini' }
+    $config = Get-Content -LiteralPath $seed -Raw
     $config = $config -replace '(?m)^ServerActors=IpDrv.UdpServerUplink[^\r\n]*\r?\n', ''
     $config = $config -replace '(?m)^ServerActors=UWeb.WebServer[^\r\n]*\r?\n', ''
     if ($config -notmatch '(?m)^ServerPackages=LanCoop\s*$') {
@@ -33,26 +35,44 @@ if (!(Test-Path -LiteralPath $iniPath)) {
     Set-Content -LiteralPath $iniPath -Value $config -Encoding ascii
 }
 # The stock shell switches any smaller window to 1024x768, then restores it
-# from a render callback during network travel, which crashes D3D. Enforce
-# the shell's minimum on existing development INIs as well as new ones.
+# from a render callback during network travel, which crashes D3D. Preserve
+# larger user resolutions and fullscreen preferences on subsequent launches.
 $config = Get-Content -LiteralPath $iniPath -Raw
-$config = $config -replace '(?m)^(WindowedViewportX|MenuViewportX)=.*$', '${1}=1024'
-$config = $config -replace '(?m)^(WindowedViewportY|MenuViewportY)=.*$', '${1}=768'
-$config = $config -replace '(?m)^StartupFullscreen=.*$', 'StartupFullscreen=False'
+$config = [regex]::Replace($config, '(?m)^(WindowedViewportX|MenuViewportX)=(\d+)', { param($m) $m.Groups[1].Value + '=' + [Math]::Max(1024, [int]$m.Groups[2].Value) })
+$config = [regex]::Replace($config, '(?m)^(WindowedViewportY|MenuViewportY)=(\d+)', { param($m) $m.Groups[1].Value + '=' + [Math]::Max(768, [int]$m.Groups[2].Value) })
 $config = $config -replace '(?m)^BaseMenu=.*$', 'BaseMenu=LanCoop.LanCoopRootWindow'
 Set-Content -LiteralPath $iniPath -Value $config -Encoding ascii
 if (!(Test-Path -LiteralPath $userPath)) {
-    Copy-Item -LiteralPath (Join-Path $system 'DefUser.ini') -Destination $userPath
+    $userSeed = Join-Path $system 'User.ini'
+    if (!(Test-Path -LiteralPath $userSeed)) { $userSeed = Join-Path $system 'DefUser.ini' }
+    Copy-Item -LiteralPath $userSeed -Destination $userPath
 }
+$identityPath = Join-Path $system "LanCoop${Role}Identity.txt"
+if (!(Test-Path -LiteralPath $identityPath)) { [guid]::NewGuid().ToString('N') | Set-Content -LiteralPath $identityPath -Encoding ascii }
+$clientId = (Get-Content -LiteralPath $identityPath -Raw).Trim()
+if ($clientId -notmatch '^[a-zA-Z0-9-]{1,80}$') { throw 'Invalid coop identity file.' }
+$settingsPath = Join-Path $system 'LanCoopSession.ini'
+$settingsText = if (Test-Path -LiteralPath $settingsPath) { Get-Content -LiteralPath $settingsPath -Raw } else { '' }
+function Get-CoopSetting([string]$Key, [string]$Fallback) {
+    $settingMatch = [regex]::Match($settingsText, '(?im)^' + [regex]::Escape($Key) + '=(.*)$')
+    if ($settingMatch.Success) { return $settingMatch.Groups[1].Value.Trim().Trim('"') }
+    return $Fallback
+}
+$coopPort = Get-CoopSetting 'Port' '7787'
+if ($coopPort -notmatch '^\d+$' -or [int]$coopPort -lt 1 -or [int]$coopPort -gt 65535) { throw 'Invalid coop port.' }
 New-Item -ItemType Directory -Force -Path (Join-Path $game "LanCoop${Role}Saves"), (Join-Path $game "LanCoop${Role}Cache") | Out-Null
 $url = if ($Role -eq 'Host') {
-    'suburbs-3.fuk?Game=LanCoop.LanCoopGameInfo?listen?Port=7787?Name=Dude'
+    $startMap = if ((Get-CoopSetting 'bSkipIntro' 'true') -ieq 'false') { 'intro.fuk' } else { 'suburbs-3.fuk' }
+    $hostName = (Get-CoopSetting 'PlayerName' 'Dude') -replace '[^a-zA-Z0-9_-]', '_'
+    $players = [Math]::Min(16, [Math]::Max(1, [int](Get-CoopSetting 'PlayerLimit' '2')))
+    $spectators = [Math]::Min(16, [Math]::Max(0, [int](Get-CoopSetting 'SpectatorLimit' '2')))
+    "${startMap}?Game=LanCoop.LanCoopGameInfo?listen?Port=${coopPort}?Name=${hostName}?MaxPlayers=${players}?MaxSpectators=${spectators}?CoopId=${clientId}"
 } elseif ($Role -eq 'Client') {
-    "${HostAddress}:7787?Name=Guest"
+    "${HostAddress}:${coopPort}?Name=Guest?CoopId=${clientId}"
 } else {
     'Startup.fuk'
 }
-$arguments = @($url, "ini=$iniName", "userini=$userName", "log=LanCoop$Role.log", '-windowed', '-NewWindow')
+$arguments = @($url, "ini=$iniName", "userini=$userName", "log=LanCoop$Role.log", '-NewWindow')
 Write-Output "$Role : $url"
 if (!$PrepareOnly) {
     Start-Process -FilePath (Join-Path $system 'Postal2.exe') -WorkingDirectory $system -ArgumentList $arguments -WindowStyle Normal | Out-Null

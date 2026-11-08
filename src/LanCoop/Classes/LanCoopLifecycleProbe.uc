@@ -276,6 +276,31 @@ event Timer()
             class'LanCoopLog'.static.WriteEvent(Self, "LifecycleFailed", "Scene camera/control state");
             return;
         }
+        if (!class'LanCoopCameraChecks'.static.Run(Self))
+        {
+            class'LanCoopLog'.static.WriteEvent(Self, "LifecycleFailed", "Buffered cutscene camera");
+            return;
+        }
+        if (!class'LanCoopEventRoutingChecks'.static.Run(G, LanCoopPlayer(First), LanCoopPlayer(Second)))
+        {
+            class'LanCoopLog'.static.WriteEvent(Self, "LifecycleFailed", "Event participant routing");
+            return;
+        }
+        if (!class'LanCoopSessionChecks'.static.Run(G, LanCoopPlayer(First), LanCoopPlayer(Second)))
+        {
+            class'LanCoopLog'.static.WriteEvent(Self, "LifecycleFailed", "Map snapshot or reconnect state");
+            return;
+        }
+        if (!class'LanCoopPresentationChecks'.static.Run(G, LanCoopPlayer(First), LanCoopPlayer(Second)))
+        {
+            class'LanCoopLog'.static.WriteEvent(Self, "LifecycleFailed", "Attachment bindings or subtitle speaker identity");
+            return;
+        }
+        if (!class'LanCoopMapChecks'.static.Run(G))
+        {
+            class'LanCoopLog'.static.WriteEvent(Self, "LifecycleFailed", "Map objectives or completion crossout");
+            return;
+        }
         if (!CheckDayExit(G))
         {
             class'LanCoopLog'.static.WriteEvent(Self, "LifecycleFailed", "Premature day exit guard");

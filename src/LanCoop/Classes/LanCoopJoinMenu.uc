@@ -16,6 +16,7 @@ function CreateMenuContents()
     ItemHeight = 28;
     GamesCombo = AddComboBox("LAN games", "Select a game discovered on your local network.", ItemFont);
     AddressEdit = AddEditBox("Direct address", "Optional: enter an IP and port if broadcasts are blocked.", ItemFont);
+    AddressEdit.SetValue(class'LanCoopSessionSettings'.Default.LastAddress);
     SpectateCheck = AddCheckbox("Join as spectator", "Uses a spectator slot instead of a player slot.", ItemFont);
     SpectateCheck.SetValue(false);
     StatusChoice = AddChoice("Searching LAN...", "", ItemFont, TA_Left);
@@ -91,7 +92,9 @@ function Notify(UWindowDialogControl C, byte E)
             SetSearchStatus("Select a LAN game or enter a valid address.");
             return;
         }
-        URL = Address;
+        class'LanCoopSessionSettings'.Default.LastAddress = Address;
+        class'LanCoopSessionSettings'.static.StaticSaveConfig();
+        URL = Address $ "?CoopId=" $ class'LanCoopSessionSettings'.static.GetClientId();
         if (SpectateCheck.GetValue())
             URL = URL $ "?SpectatorOnly=true";
         else

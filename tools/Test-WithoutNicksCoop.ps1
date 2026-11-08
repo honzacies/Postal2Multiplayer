@@ -50,7 +50,7 @@ try {
     & .\UCC.exe LanCoop.LanCoopBaseFixesCommandlet ini=LanCoopAudit.ini userini=LanCoopAuditUser.ini log=BaseFixes.log unattended
     if ($LASTEXITCODE -ne 0 -or !(Select-String -LiteralPath 'BaseFixes.log' -SimpleMatch 'BaseFixAuditOk' -Quiet)) { throw 'Base fixes missing or old coop package loaded.' }
     $stdout = Join-Path $auditRoot 'Lifecycle.stdout.txt'
-    $server = Start-Process -FilePath (Join-Path $system 'UCC.exe') -WorkingDirectory $system -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError (Join-Path $auditRoot 'Lifecycle.stderr.txt') -ArgumentList @('server','suburbs-3.fuk?Game=LanCoop.LanCoopGameInfo?Port=7799?LifecycleProbe=1','ini=LanCoopAudit.ini','userini=LanCoopAuditUser.ini','log=Lifecycle.log','unattended')
+    $server = Start-Process -FilePath (Join-Path $system 'UCC.exe') -WorkingDirectory $system -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError (Join-Path $auditRoot 'Lifecycle.stderr.txt') -ArgumentList @('server','suburbs-3.fuk?Game=LanCoop.LanCoopGameInfo?Port=7799?LifecycleProbe=1?CoopNoDiscovery=1','ini=LanCoopAudit.ini','userini=LanCoopAuditUser.ini','log=Lifecycle.log','unattended')
     $deadline = (Get-Date).AddSeconds(45)
     $passed = $false
     while ((Get-Date) -lt $deadline) {

@@ -5,11 +5,15 @@ class LanCoopSceneRelay extends Info;
 var LanCoopPlayer Source;
 var SceneManager Scene;
 var float LastRunningTime, NextFrameTime;
+var int FrameNumber, CameraEpoch;
+var SceneManager LastFrameScene;
+var Actor LastFrameView;
 
 function BeginScene(LanCoopPlayer Viewer, SceneManager SM)
 {
     local LanCoopPlayer P;
     Source = Viewer;
+    CameraEpoch++;
     Scene = SM;
     LastRunningTime = Level.TimeSeconds;
     foreach DynamicActors(class'LanCoopPlayer', P)
@@ -63,8 +67,14 @@ event Tick(float Delta)
         return;
     NextFrameTime = Level.TimeSeconds + 0.025;
     Source.GetOriginalSceneView(ViewActor, CameraLocation, CameraRotation);
+    if (Scene != LastFrameScene || ViewActor != LastFrameView)
+        CameraEpoch++;
+    LastFrameScene = Scene;
+    LastFrameView = ViewActor;
+    FrameNumber++;
     foreach DynamicActors(class'LanCoopPlayer', P)
-        P.ClientCoopSceneFrame(CameraLocation, CameraRotation, Source.FOVAngle, Scene.bCinematicView);
+        P.ClientCoopSceneFrame(CameraLocation, CameraRotation, Source.FOVAngle, Scene.bCinematicView,
+            Level.TimeSeconds, CameraEpoch, FrameNumber);
 }
 
 defaultproperties

@@ -13,7 +13,7 @@ static function WriteEvent(Object Context, string EventName, optional string Dat
     if (!Default.bVerbose)
         return;
     // Console stays readable; the file retains full diagnostic details.
-    ConsoleLine = Left(EventName $ " " $ Data, 40);
+    ConsoleLine = Left(EventName $ " " $ Data, 100);
     A = Actor(Context);
     if (A != None && A.Level != None)
         Data = "Time=" $ A.Level.TimeSeconds $ " NetMode=" $ A.Level.NetMode $ " Actor=" $ Context $ " " $ Data;

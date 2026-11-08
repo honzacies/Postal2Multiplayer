@@ -12,6 +12,8 @@ var bool bCoopArrivalHandled;
 var bool bCoopDayLoadoutApplied;
 var bool bCoopArrivalPlaced;
 var travel float CoopWantedTime;
+var bool bCoopPeeing;
+var LanCoopUrineVisual CoopUrineVisual;
 
 function RestoreCombatReferences()
 {
@@ -78,7 +80,7 @@ event TravelPostAccept()
 replication
 {
     reliable if (Role == ROLE_Authority && bNetDirty)
-        CoopAppearance;
+        CoopAppearance, bCoopPeeing;
 }
 
 function SetCoopAppearance(class<xMpPawn> NewAppearance)
@@ -104,12 +106,15 @@ simulated function ApplyCoopAppearance()
     if (AppliedAppearance != CoopAppearance)
     {
         CoreSPMesh = Body;
-        LinkMeshAndAnims(Body);
+        LinkMeshAndAnims(Body, true);
         SetMySkin(CoopAppearance.Default.Skins[0]);
         HeadMesh = CoopAppearance.Default.HeadMesh;
         HeadSkin = CoopAppearance.Default.HeadSkin;
         bShortSleeves = CoopAppearance.Default.bShortSleeves;
         AppliedAppearance = CoopAppearance;
+        // Relinking a skeleton can invalidate the equipped third-person bone.
+        if (Weapon != None && Weapon.ThirdPersonActor != None)
+            Weapon.AttachToPawn(Self);
         class'LanCoopLog'.static.WriteEvent(Self, "AppearanceApplied", "NetMode=" $ Level.NetMode $ " Pawn=" $ Self $ " Class=" $ CoopAppearance);
     }
     if (MyHead != None)
@@ -136,6 +141,18 @@ simulated function PostNetBeginPlay()
 simulated function Tick(float DeltaTime)
 {
     Super.Tick(DeltaTime);
+    if (Role == ROLE_Authority)
+        bCoopPeeing = UrethraWeapon(MyUrethra) != None && UrethraWeapon(MyUrethra).UrineStream != None;
+    if (Level.NetMode != NM_DedicatedServer && !IsLocallyControlled())
+    {
+        if (bCoopPeeing && (CoopUrineVisual == None || CoopUrineVisual.bDeleteMe))
+            CoopUrineVisual = Spawn(class'LanCoopUrineVisual', Self);
+        else if (!bCoopPeeing && CoopUrineVisual != None)
+        {
+            CoopUrineVisual.Destroy();
+            CoopUrineVisual = None;
+        }
+    }
     // This engine build has no script PostNetReceive/bNetNotify hook.
     if (CoopAppearance != AppliedAppearance)
         ApplyCoopAppearance();

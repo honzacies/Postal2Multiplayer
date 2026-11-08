@@ -1,5 +1,13 @@
 // Keep the campaign HUD; add names using replicated PlayerReplicationInfo.
 class LanCoopHUD extends AWWrapHUD;
+var string CoopSubtitleSpeaker;
+
+function AddSubtitles(string N, string S, float DisplayTime, Color NameColor, Color TextColor, int Priority, int Lang)
+{
+    if (CoopSubtitleSpeaker != "")
+        N = CoopSubtitleSpeaker;
+    Super.AddSubtitles(N, S, DisplayTime, NameColor, TextColor, Priority, Lang);
+}
 
 // Original wanted icon/bar layout, including the base HUD coordinate fix;
 // the value now comes from the owning player's replicated state.

@@ -26,6 +26,7 @@ Set-Content -LiteralPath (Join-Path $stage 'Capture-Game-Fingerprint.cmd') -Valu
 Copy-Item -LiteralPath (Join-Path $root 'PACKAGING-README.txt') -Destination (Join-Path $stage 'README.txt')
 Copy-Item -LiteralPath (Join-Path $root 'DEBUGGING.md') -Destination (Join-Path $stage 'DEBUGGING.md')
 Copy-Item -LiteralPath (Join-Path $root 'MP-FIX-AUDIT.md') -Destination (Join-Path $stage 'MP-FIX-AUDIT.md')
+Copy-Item -LiteralPath (Join-Path $root 'docs/EVENT-ROUTING.md') -Destination (Join-Path $stage 'EVENT-ROUTING.md')
 & (Join-Path $PSScriptRoot 'Get-GameFingerprint.ps1') -GameDirectory $game -OutputPath (Join-Path $stage 'DevelopmentBaseline.json')
 $manifest = Get-ChildItem -LiteralPath $stage -File -Recurse | ForEach-Object {
     [pscustomobject]@{File=$_.FullName.Substring($stage.Length+1).Replace('\','/'); Bytes=$_.Length; SHA256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash}

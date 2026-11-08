@@ -11,11 +11,435 @@ var vector CoopSceneCameraLocation;
 var rotator CoopSceneCameraRotation;
 var float CoopScenePreviousFOV;
 var bool bCoopSceneHasFrame, bCoopSkipPressed;
+var LanCoopCameraBuffer CoopCameraBuffer;
 var float NextCoopInputLog;
 var name LastCoopState;
 var Pawn LastCoopPawn;
 var float CoopArrivalGraceUntil;
 var float CoopWantedPercent;
+var Texture PendingCoopNewsTexture;
+var Sound PendingCoopNewsComment;
+var bool bPendingCoopNews, bPendingCoopNewsMustWait;
+var bool bCoopNewsOffered, bCoopNewsReading;
+var name CoopBeforeNewsState;
+var LanCoopMapScreen CoopMapScreen;
+var string CoopReconnectId;
+var bool bCoopReconnectRestored;
+var bool bCoopTravelLogin;
+var Texture LastCoopMapTexture;
+var int LastCoopMapIconCount;
+var int CoopBriefedDay, CoopBriefedMask;
+var int CoopBriefingSentDay, CoopBriefingSentMask;
+var float CoopBriefingSentAt;
+var LanCoopAttachmentGuard AttachmentGuard;
+var bool bCoopAppearanceRefreshPending;
+var Weapon CoopAppearanceWeapon;
+var P2Weapon CoopAppearanceFoot, CoopAppearanceUrethra;
+
+function ClientRefreshCoopAppearance(Weapon HeldWeapon, P2Weapon Foot, P2Weapon Urethra)
+{
+    CoopAppearanceWeapon = HeldWeapon;
+    CoopAppearanceFoot = Foot;
+    CoopAppearanceUrethra = Urethra;
+    bCoopAppearanceRefreshPending = true;
+}
+
+function FinishCoopAppearanceRefresh()
+{
+    local LanCoopRootWindow R;
+    local Inventory Item;
+    local int Count;
+    if (Pawn == None || Player == None || Player.InteractionMaster == None || bCoopScene)
+        return;
+    R = LanCoopRootWindow(Player.InteractionMaster.BaseMenu);
+    if (R != None && (R.IsMenuShowing() || R.bCoopLoading))
+        return;
+    // Never rebuild or grant inventory as part of a cosmetic change.
+    for (Item = Pawn.Inventory; Item != None && Count < 5000; Item = Item.Inventory)
+        Count++;
+    if (Item != None || Pawn.Inventory == None)
+        return;
+    MyPawn = P2MoCapPawn(Pawn);
+    MyPawn.bPlayer = true;
+    MyPawn.ClientPlayerStartingFinished();
+    if (CoopAppearanceFoot != None && CoopAppearanceFoot.Owner == Pawn)
+        MyPawn.ClientSetFoot(CoopAppearanceFoot);
+    if (CoopAppearanceUrethra != None && CoopAppearanceUrethra.Owner == Pawn)
+        MyPawn.ClientSetUrethra(CoopAppearanceUrethra);
+    if (CoopAppearanceWeapon != None && CoopAppearanceWeapon.Owner == Pawn)
+    {
+        CoopAppearanceWeapon.Instigator = Pawn;
+        if (Pawn.Weapon == None || Pawn.Weapon.bDeleteMe)
+            CoopAppearanceWeapon.ClientWeaponSet(false);
+        if (CoopAppearanceWeapon.IsInState('PendingClientWeaponSet'))
+            CoopAppearanceWeapon.ClientWeaponSet(false);
+    }
+    AddWeaponSelector();
+    AddInventorySelector();
+    if (WeaponSelector != None)
+        WeaponSelector.RefreshSelector();
+    bCoopAppearanceRefreshPending = false;
+    class'LanCoopLog'.static.WriteEvent(Self, "AppearanceControlsRefreshed", "Player=" $ PlayerReplicationInfo.PlayerName $ " State=" $ GetStateName() $ " Weapon=" $ Pawn.Weapon $ " Items=" $ Count);
+}
+
+static function string CoopSpeakerName(Actor Speaker)
+{
+    local int Depth;
+    local Pawn P;
+    for (Depth = 0; Speaker != None && Depth < 6; Depth++)
+    {
+        P = Pawn(Speaker);
+        if (P != None && P.PlayerReplicationInfo != None)
+            return P.PlayerReplicationInfo.PlayerName;
+        if (LanCoopPlayer(Speaker) != None && LanCoopPlayer(Speaker).PlayerReplicationInfo != None)
+            return LanCoopPlayer(Speaker).PlayerReplicationInfo.PlayerName;
+        if (Speaker.Owner != None)
+            Speaker = Speaker.Owner;
+        else
+            Speaker = Speaker.Base;
+    }
+    return "";
+}
+
+event CallSubtitle(Sound SpokenSound, int Index, int ActorIndex, Actor Speaker)
+{
+    local LanCoopHUD H;
+    local string Previous;
+    H = LanCoopHUD(MyHUD);
+    if (H != None)
+    {
+        Previous = H.CoopSubtitleSpeaker;
+        H.CoopSubtitleSpeaker = CoopSpeakerName(Speaker);
+    }
+    // Preserve the stock text, language, duration, priority and sound filtering.
+    Super.CallSubtitle(SpokenSound, Index, ActorIndex, Speaker);
+    if (H != None)
+        H.CoopSubtitleSpeaker = Previous;
+}
+
+simulated event Destroyed()
+{
+    local LanCoopGameInfo G;
+    if (Role == ROLE_Authority)
+    {
+        G = LanCoopGameInfo(Level.Game);
+        if (G != None && G.ReconnectStore != None && !G.bTravelQueued && Pawn != None && Pawn.Health > 0)
+        {
+            G.ReconnectStore.Capture(G, Self);
+            // Avoid a disconnect suicide dropping duplicate copies of saved gear.
+            Pawn.Destroy();
+            Pawn = None;
+            MyPawn = None;
+        }
+    }
+    Super.Destroyed();
+}
+
+exec function QuickUseMap()
+{
+    RequestMap();
+}
+
+function RequestMap()
+{
+    if (!bCoopScene)
+        ServerRequestCoopMapScreen();
+}
+
+function ServerRequestCoopMapScreen()
+{
+    SendCoopMap(false);
+}
+
+// Only the day number and its per-errand state travel: the client rebuilds
+// the paper, the writing and the icons from the campaign class defaults.
+// A briefing is the coop stand-in for the original forced start-of-day map.
+function bool SendCoopMap(bool bBriefing)
+{
+    local LanCoopGameInfo G;
+    G = LanCoopGameInfo(Level.Game);
+    if (G == None || Role < ROLE_Authority || !G.HasValidCampaignDay() || G.IsWeekend()
+        || Pawn == None || bCoopScene || bCoopNewsReading || bCoopNewsOffered
+        || Pawn.FindInventoryType(class'Inventory.MapInv') == None)
+        return false;
+    if (bBriefing && !bCoopClientReady)
+        return false;
+    G.RevealCampaignErrands();
+    bCoopNewsOffered = true;
+    ClientCoopMapShow(G.TheGameState.CurrentDay, G.CampaignErrandMask(0),
+        G.CampaignErrandMask(1), G.CampaignErrandMask(2), G.CampaignErrandMask(3), bBriefing);
+    class'LanCoopLog'.static.WriteEvent(Self, "MapRoutedToOwner", "Player=" $ PlayerReplicationInfo.PlayerName
+        $ " Day=" $ G.TheGameState.CurrentDay $ " Briefing=" $ bBriefing
+        $ " Active=" $ G.CampaignErrandMask(0) $ " Revealed=" $ G.CampaignErrandMask(1));
+    return true;
+}
+
+// The crossout is shown with that errand still unmarked so the original
+// animation can strike it through, exactly as the single-player map does.
+function bool SendCoopMapCrossOut(int Errand)
+{
+    local LanCoopGameInfo G;
+    local int Done, Bit;
+    G = LanCoopGameInfo(Level.Game);
+    if (G == None || Role < ROLE_Authority || !G.HasValidCampaignDay() || G.IsWeekend()
+        || Pawn == None || bCoopScene || bCoopNewsReading || bCoopNewsOffered
+        || Pawn.FindInventoryType(class'Inventory.MapInv') == None)
+        return false;
+    Bit = 1 << Errand;
+    Done = G.CampaignErrandMask(3);
+    Done = Done - (Done & Bit);
+    bCoopNewsOffered = true;
+    ClientCoopMapCrossOut(G.TheGameState.CurrentDay, G.CampaignErrandMask(0),
+        G.CampaignErrandMask(1), G.CampaignErrandMask(2), Done, Errand, G.IsPlayerReadyForHome());
+    class'LanCoopLog'.static.WriteEvent(Self, "ErrandCrossOutSent", "Player=" $ PlayerReplicationInfo.PlayerName
+        $ " Day=" $ G.TheGameState.CurrentDay $ " Errand=" $ Errand);
+    return true;
+}
+
+function ClientCoopMapCrossOut(int Day, int ActiveMask, int RevealedMask,
+    int LocationMask, int DoneMask, int Errand, bool bReadyForHome)
+{
+    EnsureCoopMapScreen();
+    if (CoopMapScreen == None || Pawn == None || bCoopScene
+        || (CurrentScreen != None && CurrentScreen.IsRunning())
+        || !CoopMapScreen.BuildCoopDay(Day, ActiveMask, RevealedMask, LocationMask, DoneMask, false))
+    {
+        ServerSetCoopNewsReading(false);
+        return;
+    }
+    LastCoopMapTexture = CoopMapScreen.BackgroundTex;
+    CoopMapScreen.bCoopReadyForHome = bReadyForHome;
+    MyMapScreen = CoopMapScreen;
+    CoopMapScreen.ShowCoopCrossOut(Errand);
+    CurrentScreen = CoopMapScreen;
+    MyOldState = GetStateName();
+    ServerSetCoopNewsReading(true);
+    GotoState('CoopReadNews');
+}
+
+function EnsureCoopMapScreen()
+{
+    local int I;
+    if (Player == None || Player.InteractionMaster == None)
+        return;
+    if (CoopMapScreen != None)
+        for (I = 0; I < Player.LocalInteractions.Length; I++)
+            if (Player.LocalInteractions[I] == CoopMapScreen)
+                return;
+    CoopMapScreen = None;
+    for (I = 0; I < Player.LocalInteractions.Length; I++)
+        if (LanCoopMapScreen(Player.LocalInteractions[I]) != None)
+        {
+            CoopMapScreen = LanCoopMapScreen(Player.LocalInteractions[I]);
+            return;
+        }
+    // The stock screen asks a single-player GameInfo for the day and would
+    // answer the map key with an empty paper on a client.
+    if (MyMapScreen != None)
+        Player.InteractionMaster.RemoveInteraction(MyMapScreen);
+    MyMapScreen = None;
+    CoopMapScreen = LanCoopMapScreen(Player.InteractionMaster.AddInteraction("LanCoop.LanCoopMapScreen", Player));
+}
+
+function ClientCoopMapShow(int Day, int ActiveMask, int RevealedMask,
+    int LocationMask, int DoneMask, bool bBriefing)
+{
+    local LanCoopMapScreen Built;
+
+    LastCoopMapTexture = None;
+    LastCoopMapIconCount = 0;
+    // Record what the day's paper carries before touching the viewport, so a
+    // server-side check without one can still read the routed contents.
+    Built = new(None) class'LanCoopMapScreen';
+    if (!Built.BuildCoopDay(Day, ActiveMask, RevealedMask, LocationMask, DoneMask, false))
+    {
+        ServerSetCoopNewsReading(false);
+        return;
+    }
+    LastCoopMapTexture = Built.BackgroundTex;
+    LastCoopMapIconCount = Built.CoopIconCount(ActiveMask, RevealedMask, LocationMask, DoneMask);
+    EnsureCoopMapScreen();
+    if (CoopMapScreen == None || Pawn == None || bCoopScene
+        || (CurrentScreen != None && CurrentScreen.IsRunning())
+        || !CoopMapScreen.BuildCoopDay(Day, ActiveMask, RevealedMask, LocationMask, DoneMask, bBriefing))
+    {
+        ServerSetCoopNewsReading(false);
+        return;
+    }
+    MyMapScreen = CoopMapScreen;
+    if (bBriefing)
+        CoopMapScreen.ShowCoopErrands();
+    else
+        CoopMapScreen.Show();
+    CurrentScreen = CoopMapScreen;
+    MyOldState = GetStateName();
+    ServerSetCoopNewsReading(true);
+    GotoState('CoopReadNews');
+    if (bBriefing)
+        ServerConfirmCoopBriefing();
+}
+
+// A briefing counts as delivered only once the paper is actually on screen;
+// a menu or a cutscene blocking it has to leave the day still to hand out.
+function ServerConfirmCoopBriefing()
+{
+    CoopBriefedDay = CoopBriefingSentDay;
+    CoopBriefedMask = CoopBriefingSentMask;
+}
+
+function HandlePickup(Pickup Pick)
+{
+    local Sound PickupAudio;
+    Super.HandlePickup(Pick);
+    if (Pick == None)
+        return;
+    PickupAudio = Pick.PickupSound;
+    // Stock AnnouncePickup broadcasts Receiver.PlaySound after this hook.
+    // Send it to the owner instead; inventory delivery itself is unchanged.
+    Pick.PickupSound = None;
+    if (PickupAudio != None && P2Pawn(Pawn) != None && !P2Pawn(Pawn).bPlayerStarting)
+        ClientCoopPickupSound(PickupAudio);
+    class'LanCoopLog'.static.WriteEvent(Self, "PickupOwned", "Player=" $ PlayerReplicationInfo.PlayerName $ " Item=" $ Pick.InventoryType);
+}
+
+function ClientCoopPickupSound(Sound Audio)
+{
+    if (Audio != None)
+        ClientPlaySound(Audio);
+}
+
+function ServerSetCoopNewsReading(bool bReading)
+{
+    if (bReading)
+    {
+        if (!bCoopNewsOffered || bCoopNewsReading || Pawn == None)
+            return;
+        bCoopNewsReading = true;
+        Pawn.Velocity = vect(0,0,0);
+        Pawn.Acceleration = vect(0,0,0);
+        if (NetConnection(Player) != None)
+        {
+            CoopBeforeNewsState = GetStateName();
+            GotoState('CoopServerReadNews');
+        }
+    }
+    else
+    {
+        bCoopNewsReading = false;
+        bCoopNewsOffered = false;
+        if (IsInState('CoopServerReadNews'))
+            GotoState(CoopBeforeNewsState);
+    }
+}
+
+state CoopServerReadNews
+{
+    ignores Fire, AltFire, DoKick, InventoryMenu, SwitchWeapon;
+    function PlayerMove(float DeltaTime) {}
+    function ProcessMove(float DeltaTime, vector NewAccel, eDoubleClickDir DoubleClickMove, rotator DeltaRot) {}
+}
+
+function EnsureCoopNewsScreen()
+{
+    local int I;
+    if (Player == None || Player.InteractionMaster == None)
+        return;
+    if (LanCoopNewsScreen(MyNewsScreen) != None)
+        return;
+    for (I = 0; I < Player.LocalInteractions.Length; I++)
+        if (LanCoopNewsScreen(Player.LocalInteractions[I]) != None)
+        {
+            MyNewsScreen = LanCoopNewsScreen(Player.LocalInteractions[I]);
+            return;
+        }
+    if (MyNewsScreen != None)
+        Player.InteractionMaster.RemoveInteraction(MyNewsScreen);
+    MyNewsScreen = NewsScreen(Player.InteractionMaster.AddInteraction("LanCoop.LanCoopNewsScreen", Player));
+}
+
+function ServerRequestCoopNews()
+{
+    if (Pawn == None || Pawn.FindInventoryType(class'Inventory.NewspaperInv') == None)
+        return;
+    if (LanCoopGameInfo(Level.Game) != None && !LanCoopGameInfo(Level.Game).IsWeekend())
+        DisplayNews();
+}
+
+function RequestNews()
+{
+    ServerRequestCoopNews();
+}
+
+function DisplayNews()
+{
+    local LanCoopGameInfo G;
+    local Texture NewsTexture;
+    if (Role < ROLE_Authority)
+    {
+        ServerRequestCoopNews();
+        return;
+    }
+    G = LanCoopGameInfo(Level.Game);
+    if (G == None || G.TheGameState == None)
+        return;
+    if (bCoopNewsOffered || bCoopNewsReading)
+        return;
+    NewsTexture = G.GetNewsTexture();
+    if (NewsTexture == None)
+        return;
+    bCoopNewsOffered = true;
+    ClientCoopNews(NewsTexture, G.GetDudeNewsComment(), G.TheGameState.bIsApocalypse);
+    class'LanCoopLog'.static.WriteEvent(Self, "NewsRoutedToOwner", "Player=" $ PlayerReplicationInfo.PlayerName $ " Day=" $ G.TheGameState.CurrentDay);
+}
+
+function ClientCoopNews(Texture NewsTexture, Sound Comment, bool bForceWait)
+{
+    if (NewsTexture == None)
+        return;
+    PendingCoopNewsTexture = NewsTexture;
+    PendingCoopNewsComment = Comment;
+    bPendingCoopNewsMustWait = bForceWait;
+    bPendingCoopNews = true;
+    if (Pawn == None || MyPawn == None || Player == None || Player.InteractionMaster == None || bCoopScene)
+        return;
+    EnsureCoopNewsScreen();
+    if (MyNewsScreen == None)
+        return;
+    if (MyNewsScreen.IsRunning())
+    {
+        bPendingCoopNews = false;
+        return;
+    }
+    if (CurrentScreen != None && CurrentScreen.IsRunning())
+        return;
+    bPendingCoopNews = false;
+    LanCoopNewsScreen(MyNewsScreen).ShowCoop(NewsTexture, Comment, bForceWait);
+    if (!MyNewsScreen.IsRunning())
+        return;
+    CurrentScreen = MyNewsScreen;
+    MyOldState = GetStateName();
+    ServerSetCoopNewsReading(true);
+    GotoState('CoopReadNews');
+    class'LanCoopLog'.static.WriteEvent(Self, "NewsOpenedLocally", "Player=" $ PlayerReplicationInfo.PlayerName);
+}
+
+state CoopReadNews extends WaitScreen
+{
+    function BeginState()
+    {
+        if (MyPawn != None)
+            MyPawn.StopAcc();
+    }
+    function EndState()
+    {
+        CurrentScreen = None;
+        ServerSetCoopNewsReading(false);
+    }
+Begin:
+    while (CurrentScreen != None && CurrentScreen.IsRunning())
+        Sleep(0.05);
+    GotoState(MyOldState);
+}
 
 // The base readiness fix waits for Player, but our UI guards also require
 // InteractionMaster. Do not permanently mark a skipped setup as complete.
@@ -116,13 +540,16 @@ function ClientRestart()
 replication
 {
     reliable if (Role < ROLE_Authority)
-        ServerSetAppearance, ServerCoopMap, ServerCoopReady, ServerCoopSceneSkip;
+        ServerSetAppearance, ServerCoopMap, ServerCoopReady, ServerCoopSceneSkip,
+        ServerRequestCoopNews, ServerSetCoopNewsReading, ServerRequestCoopMapScreen,
+        ServerConfirmCoopBriefing;
     reliable if (Role == ROLE_Authority)
         CoopWantedPercent;
     reliable if (Role == ROLE_Authority)
         ClientProbeInventory, ClientProbeCombat, ClientCoopMusic, ClientStopCoopMusic, ClientClearCoopMusic,
         ClientBeginCoopScene, ClientEndCoopScene, ClientPrepareCoopTravel,
-        ClientConfirmCoopArrival;
+        ClientConfirmCoopArrival, ClientCoopNews, ClientCoopPickupSound,
+        ClientCoopMapShow, ClientCoopMapCrossOut, ClientRefreshCoopAppearance;
     unreliable if (Role == ROLE_Authority)
         ClientCoopSceneFrame;
 }
@@ -132,6 +559,18 @@ function ClientPrepareCoopTravel(Texture Background, string Destination, string 
     local LanCoopRootWindow Root;
     if (Player == None || Player.InteractionMaster == None)
         return;
+    bPendingCoopNews = false;
+    if (CoopMapScreen != None)
+    {
+        if (CoopMapScreen.IsRunning())
+            CoopMapScreen.GotoState('Shutdown');
+        CoopMapScreen.PreTravel();
+    }
+    if (MyNewsScreen != None && MyNewsScreen.IsRunning())
+    {
+        MyNewsScreen.GotoState('Shutdown');
+        MyNewsScreen.PreTravel();
+    }
     Root = LanCoopRootWindow(Player.InteractionMaster.BaseMenu);
     if (Root != None)
         Root.BeginCoopLoading(Background, Destination);
@@ -176,6 +615,14 @@ function BeginCoopScene(bool bObserver)
 {
     if (bCoopScene)
         return;
+    if (IsInState('CoopReadNews'))
+    {
+        if (CurrentScreen != None)
+            CurrentScreen.GotoState('Shutdown');
+        GotoState(MyOldState);
+    }
+    if (Role == ROLE_Authority && bCoopNewsReading)
+        ServerSetCoopNewsReading(false);
     bCoopScene = true;
     bCoopSceneObserver = bObserver;
     CoopScenePreviousState = GetStateName();
@@ -225,10 +672,16 @@ function ClientBeginCoopScene(bool bOriginalViewer)
     class'LanCoopLog'.static.WriteEvent(Self, "SceneClientBegin", "");
 }
 
-function ClientCoopSceneFrame(vector CameraLocation, rotator CameraRotation, float CameraFOV, bool bLetterbox)
+function ClientCoopSceneFrame(vector CameraLocation, rotator CameraRotation, float CameraFOV, bool bLetterbox,
+    optional float SourceTime, optional int Epoch, optional int FrameId)
 {
     if (!bCoopScene)
         return;
+    if (CoopCameraBuffer == None)
+        CoopCameraBuffer = new(None) class'LanCoopCameraBuffer';
+    if (SourceTime == 0)
+        SourceTime = Level.TimeSeconds;
+    CoopCameraBuffer.Push(CameraLocation, CameraRotation, CameraFOV, SourceTime, Level.TimeSeconds, Epoch, FrameId);
     CoopSceneCameraLocation = CameraLocation;
     CoopSceneCameraRotation = CameraRotation;
     bCoopSceneHasFrame = true;
@@ -239,6 +692,7 @@ function ClientCoopSceneFrame(vector CameraLocation, rotator CameraRotation, flo
 
 function ClientEndCoopScene()
 {
+    CoopCameraBuffer = None;
     if (Role < ROLE_Authority)
         EndCoopScene();
     FOVAngle = CoopScenePreviousFOV;
@@ -261,6 +715,8 @@ event PlayerCalcView(out actor ViewActor, out vector CameraLocation, out rotator
 {
     if (bCoopScene && bCoopSceneHasFrame)
     {
+        if (CoopCameraBuffer != None)
+            CoopCameraBuffer.Sample(Level.TimeSeconds, CoopSceneCameraLocation, CoopSceneCameraRotation, FOVAngle);
         ViewActor = Self;
         CameraLocation = CoopSceneCameraLocation;
         CameraRotation = CoopSceneCameraRotation;
@@ -296,7 +752,7 @@ function ServerCoopReady()
         bCoopClientReady = true;
         if (LanCoopGameInfo(Level.Game) != None)
         {
-            if (LanCoopGameInfo(Level.Game).bExpectTravelState)
+            if (LanCoopGameInfo(Level.Game).bExpectTravelState || bCoopReconnectRestored)
                 ClientConfirmCoopArrival(Pawn.Location, Rotation,
                     LanCoopGameInfo(Level.Game).ResolveCoopArrivalPortal(CoopArrivalPortal, ""),
                     LanCoopPawn(Pawn) != None && LanCoopPawn(Pawn).bCoopArrivalPlaced);
@@ -354,6 +810,13 @@ function PlayerTick(float DeltaTime)
         bCoopSkipPressed = bWantsToSkip != 0;
     }
     Super.PlayerTick(DeltaTime);
+    if (bCoopAppearanceRefreshPending)
+        FinishCoopAppearanceRefresh();
+    if (Level.NetMode == NM_Client && Player != None && Player.InteractionMaster != None
+        && (AttachmentGuard == None || AttachmentGuard.bDeleteMe))
+        AttachmentGuard = Spawn(class'LanCoopAttachmentGuard');
+    if (bPendingCoopNews && !bCoopScene && !IsInState('CoopReadNews'))
+        ClientCoopNews(PendingCoopNewsTexture, PendingCoopNewsComment, bPendingCoopNewsMustWait);
     if (Player != None && Player.InteractionMaster != None
         && (LastCoopState != GetStateName() || LastCoopPawn != Pawn || Level.TimeSeconds >= NextCoopInputLog))
     {
@@ -429,7 +892,12 @@ function ServerSetAppearance(string ClassName)
         return;
     SelectedAppearance = Appearance;
     if (LanCoopPawn(Pawn) != None && LanCoopPawn(Pawn).CoopAppearance != Appearance)
+    {
         LanCoopPawn(Pawn).SetCoopAppearance(Appearance);
+        LanCoopPawn(Pawn).RestoreCombatReferences();
+        ClientRefreshCoopAppearance(Pawn.Weapon, P2Pawn(Pawn).MyFoot, P2Weapon(P2Pawn(Pawn).MyUrethra));
+        class'LanCoopLog'.static.WriteEvent(Self, "AppearanceCombatPreserved", "Player=" $ PlayerReplicationInfo.PlayerName $ " Weapon=" $ Pawn.Weapon $ " Inventory=" $ Pawn.Inventory);
+    }
 }
 
 function SetupInteractions()
@@ -500,4 +968,5 @@ defaultproperties
     InventorySelectorName=LanCoopInventorySelector
     CustomInventorySelectorClassName=""
     CustomInventorySelectorName=""
+    CoopBriefedDay=-1
 }

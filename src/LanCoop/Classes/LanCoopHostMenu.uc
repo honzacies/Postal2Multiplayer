@@ -74,7 +74,8 @@ function Notify(UWindowDialogControl C, byte E)
         else
             URL = "intro.fuk";
         URL = URL $ "?Game=LanCoop.LanCoopGameInfo?listen?Port=" $ Settings.Port
-            $ "?Name=" $ Name $ "?MaxPlayers=" $ Settings.PlayerLimit $ "?MaxSpectators=" $ Settings.SpectatorLimit;
+            $ "?Name=" $ Name $ "?MaxPlayers=" $ Settings.PlayerLimit $ "?MaxSpectators=" $ Settings.SpectatorLimit
+            $ "?CoopId=" $ class'LanCoopSessionSettings'.static.GetClientId();
         Root.SetLoadingTexture(URL);
         class'LanCoopLog'.static.WriteEvent(Self, "HostRequested", "URL=" $ URL);
         ShellRootWindow(Root).HideMenu();
