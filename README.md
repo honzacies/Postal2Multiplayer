@@ -64,19 +64,54 @@ may change before a public release. Do not expect a reliable full campaign yet.
 
 ## Campaign testing
 
-| Campaign day | Fully tested in coop? |
-| --- | --- |
-| Monday | No — parts of the day and the paycheck scenario have been tested |
-| Tuesday | Not yet |
-| Wednesday | Not yet |
-| Thursday | Not yet |
-| Friday | Not yet |
-| Apocalypse Weekend: Saturday | Not yet |
-| Apocalypse Weekend: Sunday | Not yet |
+✅ = verified end-to-end in coop. ❌ = not yet verified or still has known issues.
+A successful pickup or automated check alone does not count as a completed mission.
 
-"Fully tested" means completing every required errand, keeping both players'
-inventories, checking cutscenes and transitions, and reaching the correct next day.
-Passing an automated check does not count as finishing a day.
+### Monday
+
+- Pick up Paycheck ❌ — pickup tested; protestor targeting and cutscene behavior still have issues.
+- Cash Paycheck ❌
+- Buy Milk ❌
+
+### Tuesday
+
+- Confess Sins ❌
+- Get Signatures ❌
+- Return Book ❌
+- Get Gary's Autograph ❌
+
+### Wednesday
+
+- Piss on Dad's Grave ❌
+- Vote ❌
+- Get a Christmas Tree ❌
+- Pick up Laundry ❌
+
+### Thursday
+
+- Get Napalm ❌
+- Get Krotchy ❌
+- Get Steaks ❌
+- Pay Ticket ❌
+
+### Friday
+
+- Get Alternator ❌
+- Pick up Package ❌
+- Give Uncle Dave's Birthday Present ❌
+- Visit Clinic ❌
+
+### Saturday — Apocalypse Weekend
+
+- Kill Phraud ❌
+- Remaining story objectives ❌ — the individual story checklist is still being documented.
+
+### Sunday — Apocalypse Weekend
+
+- Story objectives and final encounters ❌ — the individual story checklist is still being documented.
+
+Apocalypse Weekend uses scripted story progression rather than the weekday errand
+list; its detailed checklist has not been completed yet. **No full day is verified.**
 
 ## Found a bug?
 
