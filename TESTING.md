@@ -29,6 +29,10 @@ checks without a matching user-provided installation and compiler tool.
 
 ## Active regression checklist
 
+- [ ] Finish and verify spectator mode, including spectator slot limits and map travel.
+- [ ] Implement and verify cheat mode behavior in coop.
+- [ ] Implement and verify admin access and permissions.
+- [ ] Changing character updates its body and head immediately on the other client, without jumping or moving.
 - [ ] Host crime raises only host wanted level.
 - [ ] Client crime raises only client wanted level.
 - [ ] Police select the actual suspect, independent of the HUD wanted indicator.

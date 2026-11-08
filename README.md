@@ -9,6 +9,18 @@ and Apocalypse Weekend**. Paradise Lost is not included for now.
 > **Early development:** this is a testing project, not a finished coop campaign.
 > No complete campaign day has been fully tested with two players yet.
 
+![Players together in Paradise with different characters and overhead names](docs/images/coop-gameplay.png)
+
+## Built-in multiplayer menu
+
+Host a game, find a LAN session and join your friends through the in-game
+**Multiplayer** menu. The host menu includes player/spectator limits and a skip-intro
+option, while **Player Change** lets you choose your name and character.
+
+Character changes still have a known bug: another player may see the new body
+without its head until the changed character jumps. The update should appear
+immediately; this is on the fix list below.
+
 ## Can we play it yet?
 
 Two players can join, see each other, use their inventories and travel between
@@ -26,6 +38,13 @@ bugs and unfinished features, especially around police, NPCs and cutscenes.
 | Police and wanted levels | Known bugs: the wrong player can receive the wanted level |
 | NPCs and dogs | Known bugs: they can choose the wrong player to attack |
 | Saving, loading and autosave | Not available yet |
+
+## To do
+
+- [ ] Finish spectator mode.
+- [ ] Add cheat mode.
+- [ ] Add admin access.
+- [ ] Fix character changes so both the body and head update immediately for other players, without needing to jump.
 
 ## Download
 
